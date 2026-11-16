@@ -6,7 +6,7 @@ using System.Collections;
 
 public enum ControlMode { Rotation, Scale }
 
-public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
+public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler, IScrollHandler
 {
     [Header("Целевой объект")]
     public Transform targetObject;
@@ -47,6 +47,43 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     private System.Action currentHoldAction;
     private Coroutine holdRoutine;
     private Coroutine resetRoutine;
+
+    bool pinching;
+    float previousPinchDistance;
+    readonly System.Collections.Generic.List<RaycastResult> gestureHits = new System.Collections.Generic.List<RaycastResult>();
+
+    void Update()
+    {
+        if (Input.touchCount != 2) { pinching = false; return; }
+        var a = Input.GetTouch(0); var b = Input.GetTouch(1);
+        if (!pinching)
+        {
+            if (!IsGestureSurface(a.position) || !IsGestureSurface(b.position)) return;
+            StopReset();
+            rotationController?.EndRotation(); scaleController?.EndScaling();
+            previousPinchDistance = Vector2.Distance(a.position, b.position);
+            pinching = true;
+            return;
+        }
+        float distance = Vector2.Distance(a.position, b.position);
+        if (previousPinchDistance > 1f && distance > 1f)
+            scaleController?.ZoomByFactor(distance / previousPinchDistance);
+        previousPinchDistance = distance;
+    }
+
+    bool IsGestureSurface(Vector2 position)
+    {
+        if (EventSystem.current == null) return false;
+        gestureHits.Clear();
+        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, gestureHits);
+        return gestureHits.Count > 0 && gestureHits[0].gameObject == gameObject;
+    }
+
+    public void OnScroll(PointerEventData eventData)
+    {
+        StopReset();
+        scaleController?.ZoomByFactor(Mathf.Exp(eventData.scrollDelta.y * .15f));
+    }
 
     void Start()
     {
@@ -274,6 +311,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     void OnDisable()
     {
+        pinching = false;
         StopButtonHold();
         StopReset();
         rotationController?.EndRotation();
@@ -338,7 +376,10 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
                 Image invertImage = invertButton.GetComponent<Image>();
                 if (invertImage != null)
                 {
-                    invertImage.color = rotationController.GetInvertButtonColor();
+                    invertImage.color = Color.white;
+                    var colors = invertButton.colors;
+                    colors.normalColor = rotationController.GetInvertButtonColor();
+                    invertButton.colors = colors;
                 }
 
                 TextMeshProUGUI invertText = invertButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -354,11 +395,11 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         bool isRotationMode = currentMode == ControlMode.Rotation;
 
-        // Все 4 стрелочки всегда активны в режиме вращения
-        if (rotateUpButton != null) rotateUpButton.gameObject.SetActive(isRotationMode);
-        if (rotateDownButton != null) rotateDownButton.gameObject.SetActive(isRotationMode);
-        if (rotateLeftButton != null) rotateLeftButton.gameObject.SetActive(isRotationMode);
-        if (rotateRightButton != null) rotateRightButton.gameObject.SetActive(isRotationMode);
+        // Rotation uses a direct drag; the old arrow buttons stay hidden.
+        if (rotateUpButton != null) rotateUpButton.gameObject.SetActive(false);
+        if (rotateDownButton != null) rotateDownButton.gameObject.SetActive(false);
+        if (rotateLeftButton != null) rotateLeftButton.gameObject.SetActive(false);
+        if (rotateRightButton != null) rotateRightButton.gameObject.SetActive(false);
 
         if (scaleUpButton != null) scaleUpButton.gameObject.SetActive(!isRotationMode);
         if (scaleDownButton != null) scaleDownButton.gameObject.SetActive(!isRotationMode);
@@ -382,7 +423,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (targetObject == null) return;
+        if (targetObject == null || Input.touchCount > 1 || pinching) return;
         StopReset();
 
         if (currentMode == ControlMode.Rotation && rotationController != null)
@@ -397,7 +438,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (targetObject == null) return;
+        if (targetObject == null || Input.touchCount > 1 || pinching) return;
 
         if (currentMode == ControlMode.Rotation && rotationController != null)
         {
@@ -470,6 +511,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     public void SetTargetObject(Transform newTarget)
     {
+        pinching = false;
         StopButtonHold();
         StopReset();
         targetObject = newTarget;

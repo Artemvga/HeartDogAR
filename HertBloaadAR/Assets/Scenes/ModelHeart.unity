@@ -1476,6 +1476,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dogHeartAnimator: {fileID: 640117810}
+  heartAnimators:
+  - {fileID: 640117810}
+  - {fileID: 1987214380}
   speedSlider: {fileID: 1471382209}
   stateText: {fileID: 970791273}
   bpmText: {fileID: 1322138311}

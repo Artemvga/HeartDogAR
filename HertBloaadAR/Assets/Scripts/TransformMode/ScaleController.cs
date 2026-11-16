@@ -5,8 +5,8 @@ public class ScaleController : MonoBehaviour
 {
     [Header("Настройки масштабирования")]
     public float scaleSpeed = 0.01f;
-    public float minScale = 1f;
-    public float maxScale = 2f;
+    public float minScale = 0.5f;
+    public float maxScale = 4f;
     public bool smoothScaling = true;
     public float smoothFactor = 5f;
 
@@ -60,28 +60,23 @@ public class ScaleController : MonoBehaviour
     {
         if (!isActive || !isScaling || targetObject == null) return;
 
-        Vector2 screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
-        float currentDistance = Vector2.Distance(currentPosition, screenCenter);
-        float initialDistance = Vector2.Distance(initialTouchPosition, screenCenter);
-
-        // Pointer delta already measures movement; multiplying by frame time makes gestures FPS dependent.
-        float scaleChange = (currentDistance - initialDistance) * scaleSpeed * 0.1f;
-        Vector3 newScale = targetScale * (1f + scaleChange);
-
-        float clampedScale = Mathf.Clamp(newScale.x, initialScale.x * minScale, initialScale.x * maxScale);
-        newScale = initialScale * (clampedScale / initialScale.x);
-
-        if (smoothScaling)
-        {
-            targetScale = newScale;
-        }
-        else
-        {
-            targetObject.localScale = newScale;
-            targetScale = newScale;
-        }
+        // Upward drag zooms in consistently, regardless of where the gesture starts.
+        float delta = (currentPosition.y - initialTouchPosition.y) / Mathf.Max(1f, Screen.height);
+        ZoomByFactor(Mathf.Exp(delta * 3f));
 
         initialTouchPosition = currentPosition;
+    }
+
+    // Pinch and wheel are available in both control modes.
+    public void ZoomByFactor(float factor)
+    {
+        if (targetObject == null || initialScale.sqrMagnitude < 1e-10f ||
+            factor <= 0 || float.IsNaN(factor) || float.IsInfinity(factor)) return;
+        float current = Vector3.Dot(targetScale, initialScale) / initialScale.sqrMagnitude;
+        float multiplier = Mathf.Clamp(current * factor, minScale, maxScale);
+        targetScale = initialScale * multiplier;
+        // Apply immediately: zoom must also work while rotation mode is active.
+        targetObject.localScale = targetScale;
     }
 
     public void EndScaling()

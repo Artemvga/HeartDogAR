@@ -188,7 +188,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             var button = buttonObjectPairs[i].button;
             if (button == null) continue;
             var colors = button.colors;
-            colors.normalColor = i == activeIndex ? new Color32(49, 109, 101, 255) : AppPresentation.Surface;
+            colors.normalColor = i == activeIndex ? AppPresentation.SelectedSurface : AppPresentation.Surface;
             button.colors = colors;
         }
         currentActiveObject = null;

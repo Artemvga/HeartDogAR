@@ -7,10 +7,17 @@ using UnityEngine.UI;
 /// <summary>Shared presentation for the three application scenes; keeps their existing UnityEvents.</summary>
 public static class AppPresentation
 {
-    public static readonly Color Background = new Color32(13, 25, 35, 255);
-    public static readonly Color Surface = new Color32(28, 48, 61, 255);
-    public static readonly Color Accent = new Color32(99, 222, 198, 255);
-    public static readonly Color Ink = new Color32(235, 244, 247, 255);
+    // Calm textbook palette: paper, blue-green controls and sage selection.
+    public static readonly Color Background = new Color32(247, 248, 244, 255);
+    public static readonly Color Surface = new Color32(229, 238, 236, 255);
+    public static readonly Color Accent = new Color32(42, 94, 114, 255);
+    public static readonly Color Ink = new Color32(32, 52, 62, 255);
+    public static readonly Color MutedInk = new Color32(87, 109, 118, 255);
+    public static readonly Color SelectedSurface = new Color32(202, 224, 215, 255);
+    static readonly Color HoverSurface = new Color32(216, 232, 229, 255);
+    static readonly Color PressedSurface = new Color32(199, 219, 213, 255);
+    static readonly Color AccentHover = new Color32(53, 116, 138, 255);
+    static readonly Color AccentPressed = new Color32(32, 74, 91, 255);
     static Sprite rounded;
     static TMP_FontAsset interfaceFont;
     static TMP_FontAsset InterfaceFont
@@ -204,7 +211,7 @@ public static class AppPresentation
         var label=AddText(pause,"Пауза",36,TextAlignmentOptions.Center);
         button.onClick.AddListener(()=>{breathing.TogglePause();label.text=breathing.paused?"Продолжить":"Пауза";});
         var note=NewRect("Легенда",panel);Place(note,.5f,0,0,40,900,60);
-        AddText(note,"Движение частиц показывает поток воздуха",28,TextAlignmentOptions.Center);
+        AddText(note,"Поворот — одним пальцем · Масштаб — двумя",28,TextAlignmentOptions.Center);
         var back=root.GetComponentsInChildren<Button>(true);
         foreach(var control in back) if(control.name=="ButtonReturn")
         {control.gameObject.SetActive(true);Place(control.transform as RectTransform,.5f,0,0,100,900,130);SetLabel(control.transform as RectTransform,"Назад к выбору органов");}
@@ -267,7 +274,7 @@ public static class AppPresentation
         if (controller == null) return;
         controller.rotationModeColor = Accent; controller.scaleModeColor = Accent;
         controller.rotationController.normalInvertColor = Surface;
-        controller.rotationController.activeInvertColor = new Color32(49, 109, 101, 255);
+        controller.rotationController.activeInvertColor = SelectedSurface;
         var controls = find("ModeControllerUI");
         var scrim = NewRect("Фон управления", find("ModeUI"));
         scrim.SetAsFirstSibling();
@@ -283,19 +290,14 @@ public static class AppPresentation
         var modePanel = find("PanelTextMode");
         if (modePanel != null && modePanel.TryGetComponent<Image>(out var modeImage))
         { modeImage.sprite = Rounded; modeImage.type = Image.Type.Sliced; modeImage.color = Surface; modeImage.raycastTarget = false; }
-        Place(find("ButtonsRotation"), 0, 0, 235, 420, 400, 300);
-        Place(find("Arrows"), .5f, .5f, 0, 0, 400, 300);
-        Place(controller.rotateUpButton.transform as RectTransform, .5f, .5f, 0, 110, 128, 120);
-        Place(controller.rotateDownButton.transform as RectTransform, .5f, .5f, 0, -110, 128, 120);
-        Place(controller.rotateLeftButton.transform as RectTransform, .5f, .5f, -140, 0, 128, 120);
-        Place(controller.rotateRightButton.transform as RectTransform, .5f, .5f, 140, 0, 128, 120);
-        SetLabel(controller.rotateUpButton.transform as RectTransform, "↑"); SetLabel(controller.rotateDownButton.transform as RectTransform, "↓");
-        SetLabel(controller.rotateLeftButton.transform as RectTransform, "←"); SetLabel(controller.rotateRightButton.transform as RectTransform, "→");
+        // Keep the gesture receiver alive when organ panels hide the controls.
+        var safe = controller.GetComponentInParent<Canvas>().GetComponentInChildren<AppSafeArea>(true);
+        if (safe != null) { controller.transform.SetParent(safe.transform, false); controller.transform.SetAsFirstSibling(); Stretch(controller.transform as RectTransform); }
         foreach (var arrow in new[] { controller.rotateUpButton, controller.rotateDownButton, controller.rotateLeftButton, controller.rotateRightButton })
-        {
-            var label = arrow.GetComponentInChildren<TMP_Text>(true);
-            label.fontSizeMin = 48; label.fontSizeMax = 64;
-        }
+            if (arrow != null) arrow.gameObject.SetActive(false);
+        if (find("ButtonsRotation") != null) find("ButtonsRotation").gameObject.SetActive(false);
+        controller.scaleController.minScale = .5f;
+        controller.scaleController.maxScale = 4f;
         Place(find("ButtonsScale"), 0, 0, 235, 420, 420, 180);
         Place(controller.scaleUpButton.transform as RectTransform, .5f, .5f, -105, 0, 180, 150);
         Place(controller.scaleDownButton.transform as RectTransform, .5f, .5f, 105, 0, 180, 150);
@@ -309,7 +311,7 @@ public static class AppPresentation
         string[] labels = { "Сердце", "Вся модель", "Сосуды", "Лёгкие" };
         for (int i = 0; i < organs.Length; i++) { Place(find(organs[i]), .5f, 0, (i - 1.5f) * 250, 100, 230, 136); SetLabel(find(organs[i]), labels[i]); }
         var tip = NewRect("Подсказка жестов", controls); Place(tip, .5f, 0, 0, 850, 960, 80);
-        AddText(tip, "Проводите по экрану для управления моделью", 30, TextAlignmentOptions.Center);
+        AddText(tip, "Поворот — одним пальцем · Масштаб — двумя", 30, TextAlignmentOptions.Center);
     }
 
     public static void StyleButton(Button button)
@@ -321,9 +323,9 @@ public static class AppPresentation
         }
         button.transition = Selectable.Transition.ColorTint;
         var colors = button.colors;
-        colors.normalColor = Surface; colors.highlightedColor = new Color32(43, 76, 88, 255);
-        colors.pressedColor = new Color32(51, 113, 106, 255); colors.selectedColor = colors.highlightedColor;
-        colors.disabledColor = new Color32(42, 49, 57, 160); colors.fadeDuration = .12f; button.colors = colors;
+        colors.normalColor = Surface; colors.highlightedColor = HoverSurface;
+        colors.pressedColor = PressedSurface; colors.selectedColor = colors.highlightedColor;
+        colors.disabledColor = new Color32(232, 236, 233, 180); colors.fadeDuration = .12f; button.colors = colors;
         var navigation = button.navigation; navigation.mode = Navigation.Mode.Automatic; button.navigation = navigation;
         foreach (var text in button.GetComponentsInChildren<TMP_Text>(true))
         { text.font = InterfaceFont; text.fontStyle = FontStyles.Normal; text.color = Ink; text.enableAutoSizing = true; text.fontSizeMin = 24; text.fontSizeMax = 42; text.margin = new Vector4(22, 8, 22, 8); text.raycastTarget = false; }
@@ -332,7 +334,7 @@ public static class AppPresentation
     static void Primary(RectTransform rect)
     {
         if (rect == null || !rect.TryGetComponent<Button>(out var button)) return;
-        var colors = button.colors; colors.normalColor = Accent; colors.highlightedColor = new Color32(143, 240, 219, 255); colors.pressedColor = new Color32(73, 184, 165, 255); button.colors = colors;
+        var colors = button.colors; colors.normalColor = Accent; colors.highlightedColor = AccentHover; colors.pressedColor = AccentPressed; colors.selectedColor = Accent; button.colors = colors;
         foreach (var text in button.GetComponentsInChildren<TMP_Text>(true)) text.color = Background;
     }
 
@@ -340,7 +342,7 @@ public static class AppPresentation
     {
         var label = NewRect("Раздел", parent); Place(label, .5f, .80f, 0, 90, 900, 70); AddText(label, eyebrow, 30, TextAlignmentOptions.Left).color = Accent;
         var heading = NewRect("Заголовок", parent); Place(heading, .5f, .70f, 0, 0, 900, 280); AddText(heading, title, 76, TextAlignmentOptions.Left);
-        var description = NewRect("Описание", parent); Place(description, .5f, .54f, 0, 0, 900, 170); AddText(description, subtitle, 36, TextAlignmentOptions.Left).color = new Color32(167, 189, 201, 255);
+        var description = NewRect("Описание", parent); Place(description, .5f, .54f, 0, 0, 900, 170); AddText(description, subtitle, 36, TextAlignmentOptions.Left).color = MutedInk;
     }
 
     static TMP_Text AddText(RectTransform parent, string value, float size, TextAlignmentOptions alignment)

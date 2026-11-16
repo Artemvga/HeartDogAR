@@ -14,8 +14,12 @@ public static class HeartDogPlayProbe
     static double deadline;
     static int phase;
     static ModeController mode;
-    static GameObject target;
     static PointerEventData pointer;
+    static Vector3 originalScale, zoomedScale;
+    static Quaternion originalRotation;
+    static HeartbeatController heartbeat;
+    static Animator heartAnimator;
+    static float animationStart, slowProgress, pausedAt;
     static HeartDogPlayProbe() { EditorApplication.update += Tick; }
     [MenuItem("Tools/HeartDog/Run play mode checks")]
     public static void Run()
@@ -53,30 +57,66 @@ public static class HeartDogPlayProbe
             {
                 mode = UnityEngine.Object.FindFirstObjectByType<ModeController>();
                 Check(mode != null && mode.targetObject != null, "Default organ target missing");
-                target = new GameObject("Hold test target"); mode.SetTargetObject(target.transform);
-                pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
-                ExecuteEvents.Execute(mode.rotateRightButton.gameObject, pointer, ExecuteEvents.pointerDownHandler);
+                var all = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                all.First(t => t.name == "ButtonHeart").GetComponent<Button>().onClick.Invoke();
+                Check(mode.gameObject.activeInHierarchy, "Heart panel disabled the gesture receiver");
+                Check(!mode.rotateUpButton.gameObject.activeInHierarchy && !mode.rotateRightButton.gameObject.activeInHierarchy, "Rotation arrows still visible");
+                var results = new System.Collections.Generic.List<RaycastResult>();
+                pointer = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .5f, Screen.height * .8f) };
+                EventSystem.current.RaycastAll(pointer, results);
+                Check(results.Count > 0 && results[0].gameObject == mode.gameObject, "Model gestures blocked by UI: " + (results.Count > 0 ? results[0].gameObject.name : "no hits"));
+                originalScale = mode.targetObject.localScale;
+                mode.OnScroll(new PointerEventData(EventSystem.current) { scrollDelta = new Vector2(0, 3) });
+                Check(mode.targetObject.localScale.x > originalScale.x * 1.4f, "Heart wheel zoom failed in rotation mode");
+                zoomedScale = mode.targetObject.localScale;
+                mode.rotationController.smoothRotation = false;
+                originalRotation = mode.targetObject.localRotation;
+                mode.OnPointerDown(pointer);
+                pointer.position += new Vector2(150, 0); mode.OnDrag(pointer); mode.OnPointerUp(pointer);
+                Check(Quaternion.Angle(originalRotation, mode.targetObject.localRotation) > 5, "Heart drag rotation failed");
+                heartbeat = UnityEngine.Object.FindFirstObjectByType<HeartbeatController>();
+                heartbeat.SetSpeedMultiplier(.5f);
+                heartAnimator = mode.targetObject.GetComponent<Animator>();
+                Check(heartAnimator != null && Mathf.Approximately(heartAnimator.speed, .5f), "Visible heart is not connected to speed slider");
                 phase = 3; deadline = EditorApplication.timeSinceStartup + .2;
             }
             else if (phase == 3)
             {
-                Check(Quaternion.Angle(target.transform.rotation, Quaternion.identity) < .01f, "Hold runs every frame before delay");
-                phase = 4; deadline = EditorApplication.timeSinceStartup + .4;
+                Check(Vector3.Distance(mode.targetObject.localScale, zoomedScale) < .001f, "Animation overwrote zoom");
+                animationStart = heartAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                phase = 4; deadline = EditorApplication.timeSinceStartup + .5;
             }
             else if (phase == 4)
             {
-                ExecuteEvents.Execute(mode.rotateRightButton.gameObject, pointer, ExecuteEvents.pointerUpHandler);
-                float angle = Quaternion.Angle(target.transform.rotation, Quaternion.identity);
-                Check(angle > 0 && angle < 5, "Hold repeat cadence incorrect: " + angle);
-                mode.SwitchControlMode();
-                Check(mode.scaleUpButton.gameObject.activeSelf && !mode.rotateUpButton.gameObject.activeSelf, "Mode switching failed");
-                var all=UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include,FindObjectsSortMode.None);
-                all.First(t=>t.name=="ButtonLungs").GetComponent<Button>().onClick.Invoke();
-                var diagram=UnityEngine.Object.FindFirstObjectByType<LungModelBreathing>();
-                Check(diagram != null && diagram.gameObject.activeInHierarchy,"Lung demonstration not visible");
-                Check(!mode.rotateUpButton.gameObject.activeInHierarchy,"Arrow controls still visible in lung demonstration");
-                Check(diagram.AirParticleCount==28,"Missing rig airflow particles");
-                diagram.TogglePause(); Check(diagram.paused,"Lung pause failed");
+                slowProgress = heartAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime - animationStart;
+                Check(slowProgress > .01f, "Heart animation is not playing");
+                heartbeat.SetSpeedMultiplier(2f);
+                animationStart = heartAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                phase = 6; deadline = EditorApplication.timeSinceStartup + .5;
+            }
+            else if (phase == 6)
+            {
+                float fastProgress = heartAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime - animationStart;
+                Check(fastProgress > slowProgress * 2.5f, "Slider does not visibly accelerate animation: " + slowProgress + " / " + fastProgress);
+                var all = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                var outerHeart = all.First(t => t.name == "HeartPol").GetComponent<Animator>();
+                Check(Mathf.Approximately(outerHeart.speed, 2f), "Second heart animation speed is out of sync");
+                all.First(t => t.name == "LungUI").gameObject.SetActive(false);
+                all.First(t => t.name == "HeartUI").gameObject.SetActive(false);
+                all.First(t => t.name == "ButtonLungs").GetComponent<Button>().onClick.Invoke();
+                var lungs = UnityEngine.Object.FindFirstObjectByType<LungModelBreathing>();
+                Check(lungs != null && lungs.gameObject.activeInHierarchy, "Lung model missing");
+                Check(lungs.GetComponentsInChildren<MeshRenderer>(true).Length == 0, "Floating lung particles still exist");
+                Check(mode.gameObject.activeInHierarchy, "Lung panel disabled gestures");
+                lungs.TogglePause(); Check(lungs.paused, "Lung pause failed");
+                pausedAt = lungs.CyclePosition;
+                phase = 7; deadline = EditorApplication.timeSinceStartup + .2;
+            }
+            else if (phase == 7)
+            {
+                var lungs = UnityEngine.Object.FindFirstObjectByType<LungModelBreathing>();
+                Check(Mathf.Approximately(lungs.CyclePosition, pausedAt), "Paused lungs keep moving");
+                lungs.TogglePause();
                 SceneManager.LoadScene("CycleHeart"); phase=5; deadline=EditorApplication.timeSinceStartup+1;
             }
             else if(phase==5)
@@ -87,7 +127,7 @@ public static class HeartDogPlayProbe
                     if(catalog.arrowMeshes.Contains(filter.sharedMesh))
                     {count++;Check(filter.GetComponent<Renderer>().forceRenderingOff,"Cycle 3D arrow reappeared during playback");Check(filter.GetComponent<FlowParticleReplacement>()!=null,"Missing particle replacement");}
                 Check(count>=9,"Expected cycle flow paths are missing");
-                File.WriteAllText("Library/HeartDogChecks/PlayMode.txt", "PASS: navigation, controls, lung pause, airflow, and cycle playback with 9 legacy arrows replaced.");
+                File.WriteAllText("Library/HeartDogChecks/PlayMode.txt", "PASS: navigation; heart gestures and persistent zoom; actual animation accelerates with slider; both hearts synchronized; no rotation arrows; lungs have no particles and pause correctly; cycle arrows replaced.");
                 Finish();
             }
         }

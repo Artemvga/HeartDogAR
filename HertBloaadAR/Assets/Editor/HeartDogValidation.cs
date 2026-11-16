@@ -66,6 +66,28 @@ public static class HeartDogValidation
                     finally { UnityEngine.Object.DestroyImmediate(target); }
                 }
                 AppPresentation.Apply(scene);
+                if (sceneName == "ModelHeart")
+                {
+                    var lung = all.First(t => t.name == "Lungs");
+                    var breath = lung.GetComponent<LungModelBreathing>();
+                    var skin = lung.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                    var meshA = new Mesh(); var meshB = new Mesh();
+                    bool active = lung.gameObject.activeSelf;
+                    var position = lung.localPosition; var rotation = lung.localRotation; var scale = lung.localScale;
+                    try
+                    {
+                        lung.gameObject.SetActive(true);
+                        breath.Sample(0); skin.BakeMesh(meshA);
+                        breath.Sample(.5f); skin.BakeMesh(meshB);
+                        var a = meshA.vertices; var b = meshB.vertices;
+                        Require(a.Length == b.Length && a.Where((vertex, i) => Vector3.Distance(vertex, b[i]) > .000001f).Any(), "Lung bone animation does not deform the actual mesh");
+                        Require(lung.localPosition == position && lung.localRotation == rotation && lung.localScale == scale, "Lung animation changed the user-controlled root transform");
+                        breath.Sample(.999f); var bones = lung.GetComponentsInChildren<Transform>(); var pose = bones.Select(t => t.localRotation).ToArray();
+                        breath.Sample(.001f);
+                        Require(bones.Where((bone, i) => Quaternion.Angle(bone.localRotation, pose[i]) > .1f).Count() == 0, "Lung loop snaps at boundary");
+                    }
+                    finally { lung.gameObject.SetActive(active); UnityEngine.Object.DestroyImmediate(meshA); UnityEngine.Object.DestroyImmediate(meshB); }
+                }
                 var catalog=Resources.Load<FlowMeshCatalog>("UI/FlowMeshCatalog");
                 Require(catalog!=null && catalog.arrowMeshes.Length>0,"Missing arrow mesh catalog");
                 int arrowCount=0;

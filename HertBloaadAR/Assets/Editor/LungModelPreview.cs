@@ -17,7 +17,7 @@ public static class LungModelPreview {
  Directory.CreateDirectory("Library/HeartDogChecks");
  foreach(var r in clone.GetComponentsInChildren<Renderer>())r.enabled=true;
  for(int frame=0;frame<2;frame++){
- breath.Sample(frame==0?.2f:.7f);
+ breath.Sample(frame==0?0f:.5f);
  Bounds bounds=new Bounds(clone.transform.position,Vector3.zero);bool first=true;
  foreach(var r in clone.GetComponentsInChildren<SkinnedMeshRenderer>()){var mesh=new Mesh();r.enabled=true;r.BakeMesh(mesh);var b=mesh.bounds;var wb=r.bounds;if(first){bounds=wb;first=false;}else bounds.Encapsulate(wb);Object.DestroyImmediate(mesh);}
  foreach(var t in clone.GetComponentsInChildren<Transform>(true))t.gameObject.layer=30;

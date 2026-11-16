@@ -17,6 +17,8 @@ public class HeartbeatController : MonoBehaviour
     [SerializeField] private float maxSpeedMultiplier = 2f;
     [SerializeField] private float baseBPM = 60f;
 
+    [SerializeField] private Animator[] heartAnimators;
+
     private void Start()
     {
         if (speedSlider == null)
@@ -53,10 +55,10 @@ public class HeartbeatController : MonoBehaviour
 
     private void UpdateAnimationSpeed(float multiplier)
     {
-        if (dogHeartAnimator != null)
-        {
-            dogHeartAnimator.speed = multiplier;
-        }
+        if (dogHeartAnimator != null) dogHeartAnimator.speed = multiplier;
+        if (heartAnimators == null) return;
+        foreach (var animator in heartAnimators)
+            if (animator != null) animator.speed = multiplier;
     }
 
     private void UpdateUI(float multiplier)
