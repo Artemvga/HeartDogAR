@@ -3,16 +3,16 @@ using System.Collections;
 
 public class RotationController : MonoBehaviour
 {
-    [Header("Настройки вращения")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё РІСЂР°С‰РµРЅРёСЏ")]
     public float rotationSpeed = 2f;
     public bool invertRotation = false;
     public bool smoothRotation = true;
     public float smoothFactor = 8f;
 
-    [Header("Настройки сброса")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё СЃР±СЂРѕСЃР°")]
     public float resetDuration = 0.5f;
 
-    [Header("Цвета кнопок")]
+    [Header("Р¦РІРµС‚Р° РєРЅРѕРїРѕРє")]
     public Color normalInvertColor = Color.white;
     public Color activeInvertColor = Color.green;
 
@@ -22,6 +22,8 @@ public class RotationController : MonoBehaviour
     private Quaternion targetRotation;
     private Quaternion initialRotation;
     private bool isActive = true;
+    private bool settling;
+    private readonly System.Collections.Generic.Dictionary<Transform, Quaternion> initialRotations = new System.Collections.Generic.Dictionary<Transform, Quaternion>();
 
     public void SetTargetObject(Transform newTarget)
     {
@@ -32,8 +34,13 @@ public class RotationController : MonoBehaviour
     {
         if (targetObject != null)
         {
-            initialRotation = targetObject.rotation;
-            targetRotation = initialRotation;
+            if (!initialRotations.TryGetValue(targetObject, out initialRotation))
+            {
+                initialRotation = targetObject.localRotation;
+                initialRotations[targetObject] = initialRotation;
+            }
+            settling = false;
+            targetRotation = targetObject.localRotation;
         }
     }
 
@@ -41,9 +48,14 @@ public class RotationController : MonoBehaviour
     {
         if (!isActive || targetObject == null) return;
 
-        if (smoothRotation)
+        if (smoothRotation && settling)
         {
-            targetObject.rotation = Quaternion.Lerp(targetObject.rotation, targetRotation, smoothFactor * Time.deltaTime);
+            targetObject.localRotation = Quaternion.Slerp(targetObject.localRotation, targetRotation, 1f - Mathf.Exp(-smoothFactor * Time.deltaTime));
+            if (Quaternion.Angle(targetObject.localRotation, targetRotation) < 0.05f)
+            {
+                targetObject.localRotation = targetRotation;
+                settling = false;
+            }
         }
     }
 
@@ -51,6 +63,7 @@ public class RotationController : MonoBehaviour
     {
         if (!isActive || targetObject == null) return;
         isRotating = true;
+        targetRotation = targetObject.localRotation;
         previousTouchPosition = touchPosition;
     }
 
@@ -63,19 +76,20 @@ public class RotationController : MonoBehaviour
 
         float direction = invertRotation ? -1f : 1f;
 
-        // Свободное вращение по всем осям
-        float rotationX = -delta.y * sensitivity * direction; // Вверх/вниз
-        float rotationY = delta.x * sensitivity * direction;  // Влево/вправо
+        // РЎРІРѕР±РѕРґРЅРѕРµ РІСЂР°С‰РµРЅРёРµ РїРѕ РІСЃРµРј РѕСЃСЏРј
+        float rotationX = -delta.y * sensitivity * direction; // Р’РІРµСЂС…/РІРЅРёР·
+        float rotationY = delta.x * sensitivity * direction;  // Р’Р»РµРІРѕ/РІРїСЂР°РІРѕ
 
         Vector3 newRotation = new Vector3(rotationX, rotationY, 0);
 
         if (smoothRotation)
         {
-            targetRotation *= Quaternion.Euler(newRotation * Time.deltaTime * 60f);
+            targetRotation *= Quaternion.Euler(newRotation);
+            settling = true;
         }
         else
         {
-            targetObject.Rotate(newRotation * Time.deltaTime * 60f, Space.Self);
+            targetObject.Rotate(newRotation, Space.Self);
         }
 
         previousTouchPosition = currentPosition;
@@ -90,7 +104,7 @@ public class RotationController : MonoBehaviour
     {
         if (targetObject != null)
         {
-            targetObject.rotation = initialRotation;
+            targetObject.localRotation = initialRotation;
             targetRotation = initialRotation;
         }
     }
@@ -100,18 +114,19 @@ public class RotationController : MonoBehaviour
         if (targetObject == null) yield break;
 
         float timer = 0f;
-        Quaternion startRotation = targetObject.rotation;
+        settling = false;
+        Quaternion startRotation = targetObject.localRotation;
 
         while (timer < resetDuration)
         {
             timer += Time.deltaTime;
             float progress = timer / resetDuration;
-            targetObject.rotation = Quaternion.Lerp(startRotation, initialRotation, progress);
+            targetObject.localRotation = Quaternion.Lerp(startRotation, initialRotation, progress);
             targetRotation = initialRotation;
             yield return null;
         }
 
-        targetObject.rotation = initialRotation;
+        targetObject.localRotation = initialRotation;
         targetRotation = initialRotation;
     }
 
@@ -133,7 +148,8 @@ public class RotationController : MonoBehaviour
     {
         if (targetObject != null)
         {
-            targetRotation = targetObject.rotation;
+            targetRotation = targetObject.localRotation;
+            settling = false;
         }
     }
 }

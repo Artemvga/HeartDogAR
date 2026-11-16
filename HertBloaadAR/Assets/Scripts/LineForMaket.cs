@@ -2,11 +2,11 @@ using UnityEngine;
 
 public class LineForMaket : MonoBehaviour
 {
-    [Header("Массивы точек")]
-    public Transform[] innerPoints;    // Точки внутри родительского объекта
-    public Transform[] outerPoints;    // Точки снаружи
+    [Header("РњР°СЃСЃРёРІС‹ С‚РѕС‡РµРє")]
+    public Transform[] innerPoints;    // РўРѕС‡РєРё РІРЅСѓС‚СЂРё СЂРѕРґРёС‚РµР»СЊСЃРєРѕРіРѕ РѕР±СЉРµРєС‚Р°
+    public Transform[] outerPoints;    // РўРѕС‡РєРё СЃРЅР°СЂСѓР¶Рё
 
-    [Header("Настройки линий")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё Р»РёРЅРёР№")]
     public Material lineMaterial;
     public Color lineColor = Color.white;
     [Range(0.01f, 0.5f)]
@@ -23,27 +23,27 @@ public class LineForMaket : MonoBehaviour
 
     void InitializeLines()
     {
-        // Проверяем массивы
+        // РџСЂРѕРІРµСЂСЏРµРј РјР°СЃСЃРёРІС‹
         if (innerPoints == null || outerPoints == null)
         {
-            Debug.LogError("Массивы точек не назначены!");
+            Debug.LogError("РњР°СЃСЃРёРІС‹ С‚РѕС‡РµРє РЅРµ РЅР°Р·РЅР°С‡РµРЅС‹!");
             return;
         }
 
         if (innerPoints.Length != outerPoints.Length)
         {
-            Debug.LogError("Количество внутренних и внешних точек должно совпадать!");
+            Debug.LogError("РљРѕР»РёС‡РµСЃС‚РІРѕ РІРЅСѓС‚СЂРµРЅРЅРёС… Рё РІРЅРµС€РЅРёС… С‚РѕС‡РµРє РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ!");
             return;
         }
 
-        // Создаем массив LineRenderer'ов
+        // РЎРѕР·РґР°РµРј РјР°СЃСЃРёРІ LineRenderer'РѕРІ
         lineRenderers = new LineRenderer[innerPoints.Length];
 
         for (int i = 0; i < innerPoints.Length; i++)
         {
             if (innerPoints[i] == null || outerPoints[i] == null)
             {
-                Debug.LogWarning($"Пропущена пара точек {i} - отсутствуют трансформы");
+                Debug.LogWarning($"РџСЂРѕРїСѓС‰РµРЅР° РїР°СЂР° С‚РѕС‡РµРє {i} - РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‚ С‚СЂР°РЅСЃС„РѕСЂРјС‹");
                 continue;
             }
 
@@ -51,36 +51,36 @@ public class LineForMaket : MonoBehaviour
         }
 
         isInitialized = true;
-        Debug.Log($"Создано {innerPoints.Length} постоянных линий");
+        Debug.Log($"РЎРѕР·РґР°РЅРѕ {innerPoints.Length} РїРѕСЃС‚РѕСЏРЅРЅС‹С… Р»РёРЅРёР№");
     }
 
     void CreateLine(int index)
     {
-        // Создаем GameObject для линии
+        // РЎРѕР·РґР°РµРј GameObject РґР»СЏ Р»РёРЅРёРё
         GameObject lineObject = new GameObject($"Line_{index}");
         lineObject.transform.SetParent(this.transform);
         lineObject.transform.localPosition = Vector3.zero;
 
-        // Добавляем и настраиваем LineRenderer
+        // Р”РѕР±Р°РІР»СЏРµРј Рё РЅР°СЃС‚СЂР°РёРІР°РµРј LineRenderer
         LineRenderer lr = lineObject.AddComponent<LineRenderer>();
         lineRenderers[index] = lr;
 
-        // Базовая настройка LineRenderer
+        // Р‘Р°Р·РѕРІР°СЏ РЅР°СЃС‚СЂРѕР№РєР° LineRenderer
         lr.positionCount = 2;
         lr.useWorldSpace = useWorldSpace;
 
-        // Устанавливаем позиции
+        // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїРѕР·РёС†РёРё
         lr.SetPosition(0, innerPoints[index].position);
         lr.SetPosition(1, outerPoints[index].position);
 
-        // Настраиваем внешний вид
+        // РќР°СЃС‚СЂР°РёРІР°РµРј РІРЅРµС€РЅРёР№ РІРёРґ
         lr.material = lineMaterial;
         lr.startColor = lineColor;
         lr.endColor = lineColor;
         lr.startWidth = lineWidth;
         lr.endWidth = lineWidth;
 
-        // Дополнительные настройки для лучшего вида
+        // Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РґР»СЏ Р»СѓС‡С€РµРіРѕ РІРёРґР°
         lr.textureMode = LineTextureMode.Stretch;
         lr.alignment = LineAlignment.View;
     }
@@ -89,7 +89,7 @@ public class LineForMaket : MonoBehaviour
     {
         if (!isInitialized) return;
 
-        // Постоянно обновляем позиции линий
+        // РџРѕСЃС‚РѕСЏРЅРЅРѕ РѕР±РЅРѕРІР»СЏРµРј РїРѕР·РёС†РёРё Р»РёРЅРёР№
         UpdateLinePositions();
     }
 
@@ -107,13 +107,13 @@ public class LineForMaket : MonoBehaviour
         }
     }
 
-    // Метод для ручного обновления
+    // РњРµС‚РѕРґ РґР»СЏ СЂСѓС‡РЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
     public void RefreshLines()
     {
         UpdateLinePositions();
     }
 
-    // Метод для очистки всех линий
+    // РњРµС‚РѕРґ РґР»СЏ РѕС‡РёСЃС‚РєРё РІСЃРµС… Р»РёРЅРёР№
     public void ClearAllLines()
     {
         if (lineRenderers == null) return;
@@ -130,7 +130,7 @@ public class LineForMaket : MonoBehaviour
         isInitialized = false;
     }
 
-    // Метод для пересоздания линий
+    // РњРµС‚РѕРґ РґР»СЏ РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ Р»РёРЅРёР№
     public void RecreateLines()
     {
         ClearAllLines();

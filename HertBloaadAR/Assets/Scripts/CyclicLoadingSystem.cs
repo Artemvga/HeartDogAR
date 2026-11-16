@@ -7,19 +7,19 @@ public class CyclicLoadingSystem : MonoBehaviour
     [System.Serializable]
     public class LoadingStep
     {
-        public string message;          // Òåêñò äëÿ îòîáðàæåíèÿ
-        public float duration;         // Äëèòåëüíîñòü øàãà â ñåêóíäàõ
-        public GameObject objectToActivate; // Îáúåêò äëÿ àêòèâàöèè
+        public string message;          // Ð¢ÐµÐºÑÑ‚ Ð´Ð»Ñ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ñ
+        public float duration;         // Ð”Ð»Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚ÑŒ ÑˆÐ°Ð³Ð° Ð² ÑÐµÐºÑƒÐ½Ð´Ð°Ñ…
+        public GameObject objectToActivate; // ÐžÐ±ÑŠÐµÐºÑ‚ Ð´Ð»Ñ Ð°ÐºÑ‚Ð¸Ð²Ð°Ñ†Ð¸Ð¸
     }
 
-    [Header("Øàãè çàãðóçêè")]
+    [Header("Ð¨Ð°Ð³Ð¸ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸")]
     [SerializeField] private LoadingStep[] loadingSteps;
 
-    [Header("UI ýëåìåíòû")]
+    [Header("UI ÑÐ»ÐµÐ¼ÐµÐ½Ñ‚Ñ‹")]
     [SerializeField] private Slider progressSlider;
     [SerializeField] private TextMeshProUGUI loadingText;
 
-    [Header("Íàñòðîéêè")]
+    [Header("ÐÐ°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸")]
     [SerializeField] private bool startOnAwake = true;
     [SerializeField] private float timeScale = 1f;
 
@@ -55,7 +55,7 @@ public class CyclicLoadingSystem : MonoBehaviour
         }
 
         if (loadingText != null)
-            loadingText.text = "Îæèäàíèå çàïóñêà...";
+            loadingText.text = "ÐžÐ¶Ð¸Ð´Ð°Ð½Ð¸Ðµ Ð·Ð°Ð¿ÑƒÑÐºÐ°...";
     }
 
     void UpdateLoadingProgress()
@@ -64,16 +64,16 @@ public class CyclicLoadingSystem : MonoBehaviour
 
         var currentStep = loadingSteps[currentStepIndex];
 
-        // Îáíîâëÿåì âðåìÿ òåêóùåãî øàãà
+        // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ Ð²Ñ€ÐµÐ¼Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ ÑˆÐ°Ð³Ð°
         currentStepTime += Time.deltaTime * timeScale;
 
-        // Âû÷èñëÿåì ïðîãðåññ òåêóùåãî øàãà (0-1)
+        // Ð’Ñ‹Ñ‡Ð¸ÑÐ»ÑÐµÐ¼ Ð¿Ñ€Ð¾Ð³Ñ€ÐµÑÑ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ ÑˆÐ°Ð³Ð° (0-1)
         float stepProgress = currentStepTime / currentStep.duration;
 
-        // Îáíîâëÿåì UI
+        // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ UI
         UpdateUI(stepProgress);
 
-        // Ïðîâåðÿåì, çàêîí÷èëñÿ ëè òåêóùèé øàã
+        // ÐŸÑ€Ð¾Ð²ÐµÑ€ÑÐµÐ¼, Ð·Ð°ÐºÐ¾Ð½Ñ‡Ð¸Ð»ÑÑ Ð»Ð¸ Ñ‚ÐµÐºÑƒÑ‰Ð¸Ð¹ ÑˆÐ°Ð³
         if (currentStepTime >= currentStep.duration)
         {
             MoveToNextStep();
@@ -84,41 +84,41 @@ public class CyclicLoadingSystem : MonoBehaviour
     {
         var currentStep = loadingSteps[currentStepIndex];
 
-        // Îáíîâëÿåì òåêñò
+        // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ Ñ‚ÐµÐºÑÑ‚
         if (loadingText != null)
             loadingText.text = currentStep.message;
 
-        // Îáíîâëÿåì ñëàéäåð (ïðîãðåññ âíóòðè òåêóùåãî øàãà)
+        // ÐžÐ±Ð½Ð¾Ð²Ð»ÑÐµÐ¼ ÑÐ»Ð°Ð¹Ð´ÐµÑ€ (Ð¿Ñ€Ð¾Ð³Ñ€ÐµÑÑ Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ³Ð¾ ÑˆÐ°Ð³Ð°)
         if (progressSlider != null)
             progressSlider.value = stepProgress;
     }
 
     void MoveToNextStep()
     {
-        // Äåàêòèâèðóåì òåêóùèé îáúåêò
+        // Ð”ÐµÐ°ÐºÑ‚Ð¸Ð²Ð¸Ñ€ÑƒÐµÐ¼ Ñ‚ÐµÐºÑƒÑ‰Ð¸Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚
         if (loadingSteps[currentStepIndex].objectToActivate != null)
         {
             loadingSteps[currentStepIndex].objectToActivate.SetActive(false);
         }
 
-        // Ïåðåõîäèì ê ñëåäóþùåìó øàãó
+        // ÐŸÐµÑ€ÐµÑ…Ð¾Ð´Ð¸Ð¼ Ðº ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐ¼Ñƒ ÑˆÐ°Ð³Ñƒ
         currentStepIndex++;
         currentStepTime = 0f;
 
-        // Åñëè äîøëè äî êîíöà ìàññèâà - íà÷èíàåì íîâûé öèêë
+        // Ð•ÑÐ»Ð¸ Ð´Ð¾ÑˆÐ»Ð¸ Ð´Ð¾ ÐºÐ¾Ð½Ñ†Ð° Ð¼Ð°ÑÑÐ¸Ð²Ð° - Ð½Ð°Ñ‡Ð¸Ð½Ð°ÐµÐ¼ Ð½Ð¾Ð²Ñ‹Ð¹ Ñ†Ð¸ÐºÐ»
         if (currentStepIndex >= loadingSteps.Length)
         {
             currentStepIndex = 0;
         }
 
-        // Àêòèâèðóåì íîâûé îáúåêò
+        // ÐÐºÑ‚Ð¸Ð²Ð¸Ñ€ÑƒÐµÐ¼ Ð½Ð¾Ð²Ñ‹Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚
         if (loadingSteps[currentStepIndex].objectToActivate != null)
         {
             loadingSteps[currentStepIndex].objectToActivate.SetActive(true);
         }
     }
 
-    // Ïóáëè÷íûé ìåòîä äëÿ ñòàðòà çàãðóçêè
+    // ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ð¹ Ð¼ÐµÑ‚Ð¾Ð´ Ð´Ð»Ñ ÑÑ‚Ð°Ñ€Ñ‚Ð° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸
     public void StartLoading()
     {
         if (isRunning || loadingSteps == null || loadingSteps.Length == 0) return;
@@ -127,13 +127,13 @@ public class CyclicLoadingSystem : MonoBehaviour
         currentStepIndex = 0;
         currentStepTime = 0f;
 
-        // Àêòèâèðóåì ïåðâûé îáúåêò
+        // ÐÐºÑ‚Ð¸Ð²Ð¸Ñ€ÑƒÐµÐ¼ Ð¿ÐµÑ€Ð²Ñ‹Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚
         if (loadingSteps[0].objectToActivate != null)
         {
             loadingSteps[0].objectToActivate.SetActive(true);
         }
 
-        Debug.Log("Öèêëè÷åñêàÿ çàãðóçêà çàïóùåíà!");
+        Debug.Log("Ð¦Ð¸ÐºÐ»Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ° Ð·Ð°Ð¿ÑƒÑ‰ÐµÐ½Ð°!");
     }
 
     public void StopLoading()
@@ -142,13 +142,13 @@ public class CyclicLoadingSystem : MonoBehaviour
 
         isRunning = false;
 
-        // Äåàêòèâèðóåì òåêóùèé îáúåêò
+        // Ð”ÐµÐ°ÐºÑ‚Ð¸Ð²Ð¸Ñ€ÑƒÐµÐ¼ Ñ‚ÐµÐºÑƒÑ‰Ð¸Ð¹ Ð¾Ð±ÑŠÐµÐºÑ‚
         if (loadingSteps[currentStepIndex].objectToActivate != null)
         {
             loadingSteps[currentStepIndex].objectToActivate.SetActive(false);
         }
 
-        Debug.Log("Öèêëè÷åñêàÿ çàãðóçêà îñòàíîâëåíà!");
+        Debug.Log("Ð¦Ð¸ÐºÐ»Ð¸Ñ‡ÐµÑÐºÐ°Ñ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ° Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð°!");
     }
 
     public void PauseLoading()
@@ -166,20 +166,20 @@ public class CyclicLoadingSystem : MonoBehaviour
         timeScale = Mathf.Max(0f, scale);
     }
 
-    // Äëÿ îòëàäêè â èíñïåêòîðå
-    [ContextMenu("Çàïóñòèòü çàãðóçêó")]
+    // Ð”Ð»Ñ Ð¾Ñ‚Ð»Ð°Ð´ÐºÐ¸ Ð² Ð¸Ð½ÑÐ¿ÐµÐºÑ‚Ð¾Ñ€Ðµ
+    [ContextMenu("Ð—Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚ÑŒ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÑƒ")]
     private void DebugStartLoading()
     {
         StartLoading();
     }
 
-    [ContextMenu("Îñòàíîâèòü çàãðóçêó")]
+    [ContextMenu("ÐžÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÑƒ")]
     private void DebugStopLoading()
     {
         StopLoading();
     }
 
-    [ContextMenu("Ïåðåéòè ê ñëåäóþùåìó øàãó")]
+    [ContextMenu("ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐ¼Ñƒ ÑˆÐ°Ð³Ñƒ")]
     private void DebugNextStep()
     {
         if (isRunning)
@@ -188,7 +188,7 @@ public class CyclicLoadingSystem : MonoBehaviour
         }
     }
 
-    // Ïóáëè÷íûå ñâîéñòâà äëÿ äîñòóïà ê ñîñòîÿíèþ
+    // ÐŸÑƒÐ±Ð»Ð¸Ñ‡Ð½Ñ‹Ðµ ÑÐ²Ð¾Ð¹ÑÑ‚Ð²Ð° Ð´Ð»Ñ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð° Ðº ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸ÑŽ
     public bool IsRunning => isRunning;
     public int CurrentStepIndex => currentStepIndex;
     public float CurrentStepProgress => loadingSteps != null && loadingSteps.Length > 0 ?

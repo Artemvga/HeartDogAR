@@ -19,21 +19,28 @@ public class HeartbeatController : MonoBehaviour
 
     private void Start()
     {
-        // Настройка слайдера
+        if (speedSlider == null)
+        {
+            Debug.LogError("HeartbeatController: РЅР°Р·РЅР°С‡СЊС‚Рµ РїРѕР»Р·СѓРЅРѕРє СЃРєРѕСЂРѕСЃС‚Рё.", this);
+            enabled = false;
+            return;
+        }
+
+        // РќР°СЃС‚СЂРѕР№РєР° СЃР»Р°Р№РґРµСЂР°
         speedSlider.minValue = minSpeedMultiplier;
         speedSlider.maxValue = maxSpeedMultiplier;
         speedSlider.value = 1f;
 
-        // Настройка текстовых меток
+        // РќР°СЃС‚СЂРѕР№РєР° С‚РµРєСЃС‚РѕРІС‹С… РјРµС‚РѕРє
         if (minSpeedText != null)
-            minSpeedText.text = "0.5x";
+            minSpeedText.text = $"{minSpeedMultiplier:0.##}Г—";
         if (maxSpeedText != null)
-            maxSpeedText.text = "2x";
+            maxSpeedText.text = $"{maxSpeedMultiplier:0.##}Г—";
 
-        // Подписываемся на событие изменения значения слайдера
+        // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРѕР±С‹С‚РёРµ РёР·РјРµРЅРµРЅРёСЏ Р·РЅР°С‡РµРЅРёСЏ СЃР»Р°Р№РґРµСЂР°
         speedSlider.onValueChanged.AddListener(OnSpeedChanged);
 
-        // Инициализируем начальные значения
+        // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РЅР°С‡Р°Р»СЊРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ
         UpdateAnimationSpeed(1f);
         UpdateUI(1f);
     }
@@ -54,46 +61,46 @@ public class HeartbeatController : MonoBehaviour
 
     private void UpdateUI(float multiplier)
     {
-        // Обновляем текст состояния в зависимости от скорости
+        // РћР±РЅРѕРІР»СЏРµРј С‚РµРєСЃС‚ СЃРѕСЃС‚РѕСЏРЅРёСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЃРєРѕСЂРѕСЃС‚Рё
         if (stateText != null)
         {
             stateText.text = GetStateByMultiplier(multiplier);
         }
 
-        // Обновляем BPM
+        // РћР±РЅРѕРІР»СЏРµРј BPM
         if (bpmText != null)
         {
             float currentBPM = baseBPM * multiplier;
-            bpmText.text = $"Ударов в минуту: {currentBPM:F0}";
+            bpmText.text = $"РЈРґР°СЂРѕРІ РІ РјРёРЅСѓС‚Сѓ: {currentBPM:F0}";
         }
     }
 
     private string GetStateByMultiplier(float multiplier)
     {
-        // Определяем состояние немецкой овчарки по скорости сердцебиения
+        // РћРїСЂРµРґРµР»СЏРµРј СЃРѕСЃС‚РѕСЏРЅРёРµ РЅРµРјРµС†РєРѕР№ РѕРІС‡Р°СЂРєРё РїРѕ СЃРєРѕСЂРѕСЃС‚Рё СЃРµСЂРґС†РµР±РёРµРЅРёСЏ
         if (multiplier <= 0.6f)
-            return "Состояние: Глубокий сон";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: Р“Р»СѓР±РѕРєРёР№ СЃРѕРЅ";
         else if (multiplier <= 0.8f)
-            return "Состояние: Покой";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: РџРѕРєРѕР№";
         else if (multiplier <= 1.2f)
-            return "Состояние: Нормальное";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: РќРѕСЂРјР°Р»СЊРЅРѕРµ";
         else if (multiplier <= 1.5f)
-            return "Состояние: Активность";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: РђРєС‚РёРІРЅРѕСЃС‚СЊ";
         else if (multiplier <= 1.8f)
-            return "Состояние: Бег";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: Р‘РµРі";
         else
-            return "Состояние: Интенсивная нагрузка";
+            return "РЎРѕСЃС‚РѕСЏРЅРёРµ: РРЅС‚РµРЅСЃРёРІРЅР°СЏ РЅР°РіСЂСѓР·РєР°";
     }
 
     public void ResetToNormalSpeed()
     {
-        speedSlider.value = 1f;
+        if (speedSlider != null) speedSlider.value = 1f;
     }
 
     public void SetSpeedMultiplier(float multiplier)
     {
         multiplier = Mathf.Clamp(multiplier, minSpeedMultiplier, maxSpeedMultiplier);
-        speedSlider.value = multiplier;
+        if (speedSlider != null) speedSlider.value = multiplier;
     }
 
     private void OnDestroy()

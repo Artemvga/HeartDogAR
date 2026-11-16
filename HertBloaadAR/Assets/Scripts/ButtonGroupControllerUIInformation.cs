@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using DG.Tweening;
+using UnityEngine.Events;
 
 public class ButtonGroupControllerUIInformation : MonoBehaviour
 {
@@ -21,18 +21,15 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
         public GameObject[] forceDeactivateObjects;
     }
 
-    [Header("Настройки кнопок и объектов")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё РєРЅРѕРїРѕРє Рё РѕР±СЉРµРєС‚РѕРІ")]
     [SerializeField] private ButtonObjectsPair[] buttonObjectPairs;
     [SerializeField] private int defaultActiveIndex = -1;
 
-    [Header("Настройки анимации")]
-    [SerializeField] private float rotationDuration = 1.0f;
-    [SerializeField] private Ease rotationEase = Ease.OutBack;
-
-    [Header("Ссылка на ModeController")]
+    [Header("РЎСЃС‹Р»РєР° РЅР° ModeController")]
     [SerializeField] private ModeController modeController;
 
     private GameObject currentActiveObject;
+    private readonly Dictionary<Button, UnityAction> listeners = new Dictionary<Button, UnityAction>();
     private Dictionary<GameObject, ObjectState> objectStates = new Dictionary<GameObject, ObjectState>();
     private Dictionary<GameObject, Material[]> originalMaterials = new Dictionary<GameObject, Material[]>();
 
@@ -45,14 +42,15 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
 
         public ObjectState(Transform transform)
         {
-            position = transform.position;
-            rotation = transform.eulerAngles;
+            position = transform.localPosition;
+            rotation = transform.localEulerAngles;
             scale = transform.localScale;
         }
 
         public void ApplyTo(Transform transform)
         {
-            transform.position = position;
+            transform.localPosition = position;
+            transform.localEulerAngles = rotation;
             transform.localScale = scale;
         }
     }
@@ -64,7 +62,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             modeController = FindObjectOfType<ModeController>();
             if (modeController == null)
             {
-                Debug.LogError("ButtonGroupController: ModeController не найден!");
+                Debug.LogError("ButtonGroupController: ModeController РЅРµ РЅР°Р№РґРµРЅ!");
                 return;
             }
         }
@@ -77,7 +75,9 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             int index = i;
             if (buttonObjectPairs[i].button != null)
             {
-                buttonObjectPairs[i].button.onClick.AddListener(() => OnButtonClick(index));
+                UnityAction action = () => OnButtonClick(index);
+                listeners[buttonObjectPairs[i].button] = action;
+                buttonObjectPairs[i].button.onClick.AddListener(action);
             }
         }
 
@@ -86,29 +86,6 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             ActivateObjectsForButton(defaultActiveIndex);
             UpdateModeControllerTarget();
 
-            // ПОВОРОТ ПЕРВОГО ОБЪЕКТА ПРИ ЗАГРУЗКЕ
-            RotateFirstObject();
-        }
-    }
-
-    private void RotateFirstObject()
-    {
-        if (currentActiveObject != null)
-        {
-            Transform targetTransform = currentActiveObject.transform;
-
-            // ПОВОРОТ НА 360 ГРАДУСОВ по оси Y
-            Vector3 currentRotation = targetTransform.eulerAngles;
-            Vector3 targetRotation = new Vector3(currentRotation.x, currentRotation.y + 360f, currentRotation.z);
-
-            // Выполняем анимацию поворота с помощью DOTween
-            targetTransform.DORotate(targetRotation, rotationDuration, RotateMode.FastBeyond360)
-                .SetEase(rotationEase)
-                .OnComplete(() => {
-                    Debug.Log($"Поворот объекта {currentActiveObject.name} на 360° завершен");
-                });
-
-            Debug.Log($"Запущен поворот объекта {currentActiveObject.name} на 360 градусов");
         }
     }
 
@@ -177,7 +154,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
         Renderer renderer = obj.GetComponent<Renderer>();
         if (renderer != null && !originalMaterials.ContainsKey(obj))
         {
-            originalMaterials[obj] = renderer.materials;
+            originalMaterials[obj] = renderer.sharedMaterials;
         }
     }
 
@@ -187,8 +164,6 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
         ActivateObjectsForButton(buttonIndex);
         UpdateModeControllerTarget();
 
-        // ПОВОРОТ НА 360° ПРИ КАЖДОМ НАЖАТИИ НА КНОПКУ
-        RotateFirstObject();
     }
 
     private void ResetPreviousObject()
@@ -196,10 +171,11 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
         if (currentActiveObject != null && objectStates.ContainsKey(currentActiveObject))
         {
             var state = objectStates[currentActiveObject];
-            currentActiveObject.transform.position = state.position;
+            currentActiveObject.transform.localPosition = state.position;
             currentActiveObject.transform.localScale = state.scale;
+            currentActiveObject.transform.localEulerAngles = state.rotation;
 
-            Debug.Log($"Объект {currentActiveObject.name} сброшен (позиция и масштаб)");
+            Debug.Log($"РћР±СЉРµРєС‚ {currentActiveObject.name} СЃР±СЂРѕС€РµРЅ (РїРѕР·РёС†РёСЏ Рё РјР°СЃС€С‚Р°Р±)");
         }
     }
 
@@ -207,6 +183,15 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
     {
         if (activeIndex < 0 || activeIndex >= buttonObjectPairs.Length) return;
 
+        for (int i = 0; i < buttonObjectPairs.Length; i++)
+        {
+            var button = buttonObjectPairs[i].button;
+            if (button == null) continue;
+            var colors = button.colors;
+            colors.normalColor = i == activeIndex ? new Color32(49, 109, 101, 255) : AppPresentation.Surface;
+            button.colors = colors;
+        }
+        currentActiveObject = null;
         bool firstObjectSet = false;
         foreach (GameObject obj in buttonObjectPairs[activeIndex].objectsToToggle)
         {
@@ -219,9 +204,9 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
                 {
                     currentActiveObject = obj;
                     firstObjectSet = true;
-                    Debug.Log($"Установлен целевой объект для ModeController: {obj.name}");
+                    Debug.Log($"РЈСЃС‚Р°РЅРѕРІР»РµРЅ С†РµР»РµРІРѕР№ РѕР±СЉРµРєС‚ РґР»СЏ ModeController: {obj.name}");
                 }
-                Debug.Log($"Активирован основной объект: {obj.name}");
+                Debug.Log($"РђРєС‚РёРІРёСЂРѕРІР°РЅ РѕСЃРЅРѕРІРЅРѕР№ РѕР±СЉРµРєС‚: {obj.name}");
             }
         }
 
@@ -231,7 +216,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             {
                 transparentObj.gameObject.SetActive(true);
                 SetObjectCustomMaterial(transparentObj.gameObject, transparentObj.transparentMaterial);
-                Debug.Log($"Активирован прозрачный объект: {transparentObj.gameObject.name}");
+                Debug.Log($"РђРєС‚РёРІРёСЂРѕРІР°РЅ РїСЂРѕР·СЂР°С‡РЅС‹Р№ РѕР±СЉРµРєС‚: {transparentObj.gameObject.name}");
             }
         }
 
@@ -241,7 +226,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             {
                 obj.SetActive(false);
                 SetObjectTransparency(obj, false);
-                Debug.Log($"Деактивирован объект: {obj.name}");
+                Debug.Log($"Р”РµР°РєС‚РёРІРёСЂРѕРІР°РЅ РѕР±СЉРµРєС‚: {obj.name}");
             }
         }
     }
@@ -253,7 +238,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
             Renderer renderer = obj.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.materials = originalMaterials[obj];
+                renderer.sharedMaterials = originalMaterials[obj];
             }
         }
     }
@@ -263,12 +248,12 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
         Renderer renderer = obj.GetComponent<Renderer>();
         if (renderer != null && customMaterial != null)
         {
-            Material[] customMaterials = new Material[renderer.materials.Length];
+            Material[] customMaterials = new Material[renderer.sharedMaterials.Length];
             for (int i = 0; i < customMaterials.Length; i++)
             {
                 customMaterials[i] = customMaterial;
             }
-            renderer.materials = customMaterials;
+            renderer.sharedMaterials = customMaterials;
         }
     }
 
@@ -276,7 +261,7 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
     {
         if (modeController == null)
         {
-            Debug.LogError("ModeController не назначен!");
+            Debug.LogError("ModeController РЅРµ РЅР°Р·РЅР°С‡РµРЅ!");
             return;
         }
 
@@ -288,17 +273,16 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
 
         if (targetObject != null)
         {
-            Debug.Log($"Обновление целевого объекта в ModeController: {targetObject.name}");
+            Debug.Log($"РћР±РЅРѕРІР»РµРЅРёРµ С†РµР»РµРІРѕРіРѕ РѕР±СЉРµРєС‚Р° РІ ModeController: {targetObject.name}");
 
-            modeController.targetObject = targetObject.transform;
-            modeController.UpdateTargetTransform();
+            modeController.SetTargetObject(targetObject.transform);
 
-            Debug.Log($"Целевой объект успешно обновлен: {targetObject.name}");
+            Debug.Log($"Р¦РµР»РµРІРѕР№ РѕР±СЉРµРєС‚ СѓСЃРїРµС€РЅРѕ РѕР±РЅРѕРІР»РµРЅ: {targetObject.name}");
         }
         else
         {
-            Debug.LogWarning("Не найден активный объект для ModeController");
-            modeController.targetObject = null;
+            Debug.LogWarning("РќРµ РЅР°Р№РґРµРЅ Р°РєС‚РёРІРЅС‹Р№ РѕР±СЉРµРєС‚ РґР»СЏ ModeController");
+            modeController.SetTargetObject(null);
         }
     }
 
@@ -319,13 +303,8 @@ public class ButtonGroupControllerUIInformation : MonoBehaviour
 
     private void OnDestroy()
     {
-        foreach (var pair in buttonObjectPairs)
-        {
-            if (pair.button != null)
-            {
-                pair.button.onClick.RemoveAllListeners();
-            }
-        }
+        foreach (var entry in listeners)
+            if (entry.Key != null) entry.Key.onClick.RemoveListener(entry.Value);
     }
 
     public void ForceUpdateTarget()

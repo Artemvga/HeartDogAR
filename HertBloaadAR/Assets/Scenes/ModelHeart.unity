@@ -1475,7 +1475,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0aeb70624dfa32847ae29f3a3287c1e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dogHeartAnimator: {fileID: 0}
+  dogHeartAnimator: {fileID: 640117810}
   speedSlider: {fileID: 1471382209}
   stateText: {fileID: 970791273}
   bpmText: {fileID: 1322138311}

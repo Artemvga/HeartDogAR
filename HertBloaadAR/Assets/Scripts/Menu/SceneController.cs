@@ -9,6 +9,7 @@ public class SceneController : MonoBehaviour
     public GameObject elementUI;
     public GameObject sliderLoad;
     public Slider slider;
+    private bool isLoading;
 
     private void Awake()
     {
@@ -24,8 +25,10 @@ public class SceneController : MonoBehaviour
 
     public void SceneLoad(int index)
     {
-        elementUI.SetActive(false);
-        sliderLoad.SetActive(true);
+        if (isLoading || index < 0 || index >= SceneManager.sceneCountInBuildSettings) return;
+        isLoading = true;
+        if (elementUI != null) elementUI.SetActive(false);
+        if (sliderLoad != null) sliderLoad.SetActive(true);
         StartCoroutine(LoadAsynk(index));
     }
 
@@ -35,7 +38,7 @@ public class SceneController : MonoBehaviour
         while (!operation.isDone)
         {
             float progres = Mathf.Clamp01(operation.progress / 0.9f);
-            slider.value = progres;
+            if (slider != null) slider.value = progres;
             yield return null;
         }
     }

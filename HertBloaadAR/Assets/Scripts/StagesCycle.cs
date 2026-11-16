@@ -33,14 +33,14 @@ public class StagesCycle : MonoBehaviour
         AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
         string newStateName = GetCurrentStateName(stateInfo);
 
-        // Если состояние изменилось
+        // Р•СЃР»Рё СЃРѕСЃС‚РѕСЏРЅРёРµ РёР·РјРµРЅРёР»РѕСЃСЊ
         if (newStateName != currentStateName)
         {
             currentStateName = newStateName;
             currentStateStartTime = Time.time;
         }
 
-        // Обновляем прогресс для текущего состояния
+        // РћР±РЅРѕРІР»СЏРµРј РїСЂРѕРіСЂРµСЃСЃ РґР»СЏ С‚РµРєСѓС‰РµРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ
         UpdateCurrentStateProgress(stateInfo);
     }
 
@@ -64,7 +64,7 @@ public class StagesCycle : MonoBehaviour
             {
                 float progress = 0f;
 
-                // Используем длину анимации для расчета прогресса
+                // РСЃРїРѕР»СЊР·СѓРµРј РґР»РёРЅСѓ Р°РЅРёРјР°С†РёРё РґР»СЏ СЂР°СЃС‡РµС‚Р° РїСЂРѕРіСЂРµСЃСЃР°
                 if (stage.animationLength > 0)
                 {
                     float elapsedTime = Time.time - currentStateStartTime;
@@ -73,7 +73,7 @@ public class StagesCycle : MonoBehaviour
                 }
                 else
                 {
-                    // Fallback: используем normalizedTime если длина не определена
+                    // Fallback: РёСЃРїРѕР»СЊР·СѓРµРј normalizedTime РµСЃР»Рё РґР»РёРЅР° РЅРµ РѕРїСЂРµРґРµР»РµРЅР°
                     progress = (stateInfo.normalizedTime % 1) * 100f;
                 }
 
@@ -116,11 +116,11 @@ public class StagesCycle : MonoBehaviour
         }
     }
 
-    // Для отладки в Inspector
+    // Р”Р»СЏ РѕС‚Р»Р°РґРєРё РІ Inspector
     [ContextMenu("Refresh Animation Lengths")]
     private void RefreshLengths()
     {
         AutoDetectAllAnimationLengths();
-        Debug.Log("Длины анимаций обновлены!");
+        Debug.Log("Р”Р»РёРЅС‹ Р°РЅРёРјР°С†РёР№ РѕР±РЅРѕРІР»РµРЅС‹!");
     }
 }

@@ -8,36 +8,36 @@ public enum ControlMode { Rotation, Scale }
 
 public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
 {
-    [Header("Целевой объект")]
+    [Header("Р¦РµР»РµРІРѕР№ РѕР±СЉРµРєС‚")]
     public Transform targetObject;
 
-    [Header("Компоненты контроллеров")]
+    [Header("РљРѕРјРїРѕРЅРµРЅС‚С‹ РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ")]
     public RotationController rotationController;
     public ScaleController scaleController;
 
-    [Header("UI Элементы")]
+    [Header("UI Р­Р»РµРјРµРЅС‚С‹")]
     public Button resetButton;
     public Button invertButton;
     public Button mainModeSwitchButton;
     public TextMeshProUGUI mainModeText;
 
-    [Header("Кнопки точного вращения")]
+    [Header("РљРЅРѕРїРєРё С‚РѕС‡РЅРѕРіРѕ РІСЂР°С‰РµРЅРёСЏ")]
     public Button rotateUpButton;
     public Button rotateDownButton;
     public Button rotateLeftButton;
     public Button rotateRightButton;
 
-    [Header("Кнопки масштабирования")]
+    [Header("РљРЅРѕРїРєРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ")]
     public Button scaleUpButton;
     public Button scaleDownButton;
 
-    [Header("Настройки режимов")]
-    public string rotationModeText = "Вращение";
-    public string scaleModeText = "Приближение";
+    [Header("РќР°СЃС‚СЂРѕР№РєРё СЂРµР¶РёРјРѕРІ")]
+    public string rotationModeText = "Р’СЂР°С‰РµРЅРёРµ";
+    public string scaleModeText = "РџСЂРёР±Р»РёР¶РµРЅРёРµ";
     public Color rotationModeColor = Color.blue;
     public Color scaleModeColor = Color.red;
 
-    [Header("Настройки точного управления")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё С‚РѕС‡РЅРѕРіРѕ СѓРїСЂР°РІР»РµРЅРёСЏ")]
     public float preciseRotationSpeed = 2.5f;
     public float preciseScaleSpeed = 0.025f;
     public float buttonHoldInterval = 0.1f;
@@ -45,6 +45,8 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     private ControlMode currentMode = ControlMode.Rotation;
     private bool isButtonHeld = false;
     private System.Action currentHoldAction;
+    private Coroutine holdRoutine;
+    private Coroutine resetRoutine;
 
     void Start()
     {
@@ -79,7 +81,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     void SetupUI()
     {
-        // Основные кнопки
+        // РћСЃРЅРѕРІРЅС‹Рµ РєРЅРѕРїРєРё
         if (resetButton != null)
         {
             resetButton.onClick.RemoveAllListeners();
@@ -98,10 +100,10 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
             mainModeSwitchButton.onClick.AddListener(OnMainModeSwitchButtonClick);
         }
 
-        // Кнопки точного вращения (всегда активны в режиме вращения)
+        // РљРЅРѕРїРєРё С‚РѕС‡РЅРѕРіРѕ РІСЂР°С‰РµРЅРёСЏ (РІСЃРµРіРґР° Р°РєС‚РёРІРЅС‹ РІ СЂРµР¶РёРјРµ РІСЂР°С‰РµРЅРёСЏ)
         SetupPreciseRotationButtons();
 
-        // Кнопки масштабирования
+        // РљРЅРѕРїРєРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ
         SetupScaleButtons();
 
         SetupTouchPanel();
@@ -160,7 +162,6 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         EventTrigger trigger = button.GetComponent<EventTrigger>();
         if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
 
-        trigger.triggers.Clear();
 
         var pointerDown = new EventTrigger.Entry();
         pointerDown.eventID = EventTriggerType.PointerDown;
@@ -191,24 +192,25 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         isButtonHeld = true;
         currentHoldAction = action;
 
-        StartCoroutine(ButtonHoldCoroutine());
-        action?.Invoke();
+        holdRoutine = StartCoroutine(ButtonHoldCoroutine());
     }
 
     void StopButtonHold()
     {
         isButtonHeld = false;
         currentHoldAction = null;
+        if (holdRoutine != null) StopCoroutine(holdRoutine);
+        holdRoutine = null;
     }
 
     IEnumerator ButtonHoldCoroutine()
     {
-        yield return new WaitForSeconds(0.3f);
+        yield return new WaitForSecondsRealtime(0.3f);
 
         while (isButtonHeld)
         {
             currentHoldAction?.Invoke();
-            yield return new WaitForSeconds(buttonHoldInterval);
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.03f, buttonHoldInterval));
         }
     }
 
@@ -219,6 +221,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         float directionMultiplier = rotationController.GetInvertState() ? -1f : 1f;
         Vector3 rotation = direction * preciseRotationSpeed * directionMultiplier;
 
+        StopReset();
         targetObject.Rotate(rotation, Space.Self);
         rotationController.ForceUpdateRotation();
     }
@@ -230,6 +233,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         float directionMultiplier = rotationController.GetInvertState() ? -1f : 1f;
         Vector3 rotation = direction * preciseRotationSpeed * 0.5f * directionMultiplier;
 
+        StopReset();
         targetObject.Rotate(rotation, Space.Self);
         rotationController.ForceUpdateRotation();
     }
@@ -244,7 +248,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     void ScalePreciseContinuous(float direction)
     {
-        if (targetObject == null || scaleController == null) return; // ИСПРАВЛЕНО: было scaleController != null
+        if (targetObject == null || scaleController == null) return; // РРЎРџР РђР’Р›Р•РќРћ: Р±С‹Р»Рѕ scaleController != null
 
         float scaleChange = direction * preciseScaleSpeed * 0.5f;
         ApplyScaleChange(scaleChange);
@@ -252,6 +256,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     void ApplyScaleChange(float scaleChange)
     {
+        StopReset();
         Vector3 newScale = targetObject.localScale * (1f + scaleChange);
 
         if (scaleController != null)
@@ -260,17 +265,30 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
             float maxScale = scaleController.GetInitialScale().x * scaleController.maxScale;
             float clampedScale = Mathf.Clamp(newScale.x, minScale, maxScale);
 
-            targetObject.localScale = Vector3.one * clampedScale;
+            Vector3 initial = scaleController.GetInitialScale();
+            if (Mathf.Approximately(initial.x, 0)) return;
+            targetObject.localScale = initial * (clampedScale / initial.x);
             scaleController.ForceUpdateScale();
         }
     }
 
-    void Update()
+    void OnDisable()
     {
-        if (isButtonHeld && currentHoldAction != null)
-        {
-            currentHoldAction?.Invoke();
-        }
+        StopButtonHold();
+        StopReset();
+        rotationController?.EndRotation();
+        scaleController?.EndScaling();
+    }
+
+    void OnApplicationFocus(bool focused)
+    {
+        if (!focused) StopButtonHold();
+    }
+
+    void StopReset()
+    {
+        if (resetRoutine != null) StopCoroutine(resetRoutine);
+        resetRoutine = null;
     }
 
     void UpdateMode()
@@ -326,7 +344,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
                 TextMeshProUGUI invertText = invertButton.GetComponentInChildren<TextMeshProUGUI>();
                 if (invertText != null)
                 {
-                    invertText.text = rotationController.GetInvertState() ? "Инверсия: Вкл" : "Инверсия: Выкл";
+                    invertText.text = rotationController.GetInvertState() ? "РРЅРІРµСЂСЃРёСЏ: Р’РєР»" : "РРЅРІРµСЂСЃРёСЏ: Р’С‹РєР»";
                 }
             }
         }
@@ -336,7 +354,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         bool isRotationMode = currentMode == ControlMode.Rotation;
 
-        // Все 4 стрелочки всегда активны в режиме вращения
+        // Р’СЃРµ 4 СЃС‚СЂРµР»РѕС‡РєРё РІСЃРµРіРґР° Р°РєС‚РёРІРЅС‹ РІ СЂРµР¶РёРјРµ РІСЂР°С‰РµРЅРёСЏ
         if (rotateUpButton != null) rotateUpButton.gameObject.SetActive(isRotationMode);
         if (rotateDownButton != null) rotateDownButton.gameObject.SetActive(isRotationMode);
         if (rotateLeftButton != null) rotateLeftButton.gameObject.SetActive(isRotationMode);
@@ -365,6 +383,7 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     public void OnPointerDown(PointerEventData eventData)
     {
         if (targetObject == null) return;
+        StopReset();
 
         if (currentMode == ControlMode.Rotation && rotationController != null)
         {
@@ -408,18 +427,20 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         if (targetObject == null) return;
 
-        StartCoroutine(SmoothReset());
+        StopButtonHold();
+        StopReset();
+        resetRoutine = StartCoroutine(SmoothReset());
     }
 
     IEnumerator SmoothReset()
     {
         if (currentMode == ControlMode.Rotation && rotationController != null)
         {
-            yield return StartCoroutine(rotationController.SmoothResetRotation());
+            yield return rotationController.SmoothResetRotation();
         }
         else if (currentMode == ControlMode.Scale && scaleController != null)
         {
-            yield return StartCoroutine(scaleController.SmoothResetScale());
+            yield return scaleController.SmoothResetScale();
         }
     }
 
@@ -441,36 +462,23 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
 
     public void SwitchControlMode()
     {
+        StopButtonHold();
+        StopReset();
         currentMode = currentMode == ControlMode.Rotation ? ControlMode.Scale : ControlMode.Rotation;
         UpdateMode();
     }
 
     public void SetTargetObject(Transform newTarget)
     {
-        if (newTarget == null)
-        {
-            Debug.LogWarning("ModeController: попытка установить null объект");
-            targetObject = null;
-            return;
-        }
-
+        StopButtonHold();
+        StopReset();
         targetObject = newTarget;
-        Debug.Log($"ModeController: установлен новый целевой объект - {newTarget.name}");
-
+        rotationController?.EndRotation();
+        scaleController?.EndScaling();
         ForceInitializeControllers();
     }
 
-    public void UpdateTargetTransform()
-    {
-        if (targetObject == null)
-        {
-            Debug.LogWarning("ModeController: не могу обновить трансформ - целевой объект null");
-            return;
-        }
-
-        Debug.Log($"ModeController: обновление трансформа для {targetObject.name}");
-        ForceInitializeControllers();
-    }
+    public void UpdateTargetTransform() => SetTargetObject(targetObject);
 
     public ControlMode GetCurrentControlMode() => currentMode;
     public Transform GetTargetObject() => targetObject;

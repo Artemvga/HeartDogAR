@@ -3,14 +3,14 @@ using System.Collections;
 
 public class ScaleController : MonoBehaviour
 {
-    [Header("Настройки масштабирования")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ")]
     public float scaleSpeed = 0.01f;
     public float minScale = 1f;
     public float maxScale = 2f;
     public bool smoothScaling = true;
     public float smoothFactor = 5f;
 
-    [Header("Настройки сброса")]
+    [Header("РќР°СЃС‚СЂРѕР№РєРё СЃР±СЂРѕСЃР°")]
     public float resetDuration = 0.5f;
 
     private Transform targetObject;
@@ -19,6 +19,7 @@ public class ScaleController : MonoBehaviour
     private Vector2 initialTouchPosition;
     private bool isScaling = false;
     private bool isActive = false;
+    private readonly System.Collections.Generic.Dictionary<Transform, Vector3> initialScales = new System.Collections.Generic.Dictionary<Transform, Vector3>();
 
     public void SetTargetObject(Transform newTarget)
     {
@@ -29,8 +30,12 @@ public class ScaleController : MonoBehaviour
     {
         if (targetObject != null)
         {
-            initialScale = targetObject.localScale;
-            targetScale = initialScale;
+            if (!initialScales.TryGetValue(targetObject, out initialScale))
+            {
+                initialScale = targetObject.localScale;
+                initialScales[targetObject] = initialScale;
+            }
+            targetScale = targetObject.localScale;
         }
     }
 
@@ -59,13 +64,12 @@ public class ScaleController : MonoBehaviour
         float currentDistance = Vector2.Distance(currentPosition, screenCenter);
         float initialDistance = Vector2.Distance(initialTouchPosition, screenCenter);
 
-        float scaleDirection = currentDistance > initialDistance ? 1f : -1f;
-
-        float scaleChange = scaleDirection * scaleSpeed * Time.deltaTime * 60f;
+        // Pointer delta already measures movement; multiplying by frame time makes gestures FPS dependent.
+        float scaleChange = (currentDistance - initialDistance) * scaleSpeed * 0.1f;
         Vector3 newScale = targetScale * (1f + scaleChange);
 
         float clampedScale = Mathf.Clamp(newScale.x, initialScale.x * minScale, initialScale.x * maxScale);
-        newScale = Vector3.one * clampedScale;
+        newScale = initialScale * (clampedScale / initialScale.x);
 
         if (smoothScaling)
         {
