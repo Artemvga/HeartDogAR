@@ -48,6 +48,8 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     private Coroutine holdRoutine;
     private Coroutine resetRoutine;
 
+    bool combinedGestures;
+    bool UsesRotationGesture => combinedGestures || currentMode == ControlMode.Rotation;
     bool pinching;
     float previousPinchDistance;
     readonly System.Collections.Generic.List<RaycastResult> gestureHits = new System.Collections.Generic.List<RaycastResult>();
@@ -332,10 +334,10 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     void UpdateMode()
     {
         if (rotationController != null)
-            rotationController.SetActive(currentMode == ControlMode.Rotation);
+            rotationController.SetActive(UsesRotationGesture);
 
         if (scaleController != null)
-            scaleController.SetActive(currentMode == ControlMode.Scale);
+            scaleController.SetActive(!UsesRotationGesture);
 
         UpdateUI();
     }
@@ -426,11 +428,11 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
         if (targetObject == null || Input.touchCount > 1 || pinching) return;
         StopReset();
 
-        if (currentMode == ControlMode.Rotation && rotationController != null)
+        if (UsesRotationGesture && rotationController != null)
         {
             rotationController.StartRotation(eventData.position);
         }
-        else if (currentMode == ControlMode.Scale && scaleController != null)
+        else if (!UsesRotationGesture && scaleController != null)
         {
             scaleController.StartScaling(eventData.position);
         }
@@ -440,11 +442,11 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         if (targetObject == null || Input.touchCount > 1 || pinching) return;
 
-        if (currentMode == ControlMode.Rotation && rotationController != null)
+        if (UsesRotationGesture && rotationController != null)
         {
             rotationController.ProcessRotation(eventData.position);
         }
-        else if (currentMode == ControlMode.Scale && scaleController != null)
+        else if (!UsesRotationGesture && scaleController != null)
         {
             scaleController.ProcessScaling(eventData.position);
         }
@@ -454,11 +456,11 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     {
         if (targetObject == null) return;
 
-        if (currentMode == ControlMode.Rotation && rotationController != null)
+        if (UsesRotationGesture && rotationController != null)
         {
             rotationController.EndRotation();
         }
-        else if (currentMode == ControlMode.Scale && scaleController != null)
+        else if (!UsesRotationGesture && scaleController != null)
         {
             scaleController.EndScaling();
         }
@@ -499,6 +501,18 @@ public class ModeController : MonoBehaviour, IPointerDownHandler, IDragHandler, 
     void OnMainModeSwitchButtonClick()
     {
         SwitchControlMode();
+    }
+
+    // Organ panels hide the mode switch: drag rotates while pinch/wheel zooms.
+    public void SetCombinedGestures(bool value)
+    {
+        combinedGestures = value;
+        pinching = false;
+        StopButtonHold();
+        StopReset();
+        rotationController?.EndRotation();
+        scaleController?.EndScaling();
+        UpdateMode();
     }
 
     public void SwitchControlMode()

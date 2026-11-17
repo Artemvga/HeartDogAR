@@ -3,12 +3,14 @@ using UnityEngine;
 
 public class LungViewPanel : MonoBehaviour
 {
+    public ModeController gestures;
     public RectTransform controls;
     public RectTransform panelToggle;
     readonly Dictionary<GameObject,bool> previous=new Dictionary<GameObject,bool>();
     bool restoreToggle;
     void OnEnable()
     {
+        gestures?.SetCombinedGestures(true);
         previous.Clear();
         if(controls!=null) foreach(Transform child in controls)
         {
@@ -23,5 +25,6 @@ public class LungViewPanel : MonoBehaviour
     {
         foreach(var entry in previous)if(entry.Key!=null)entry.Key.SetActive(entry.Value);
         if(panelToggle!=null)panelToggle.gameObject.SetActive(restoreToggle);
+        gestures?.SetCombinedGestures(false);
     }
 }

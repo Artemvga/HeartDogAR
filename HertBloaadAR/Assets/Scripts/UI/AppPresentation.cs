@@ -186,7 +186,7 @@ public static class AppPresentation
     {
         var root=find("HeartUI");if(root==null)return;Stretch(root);
         foreach(var button in root.GetComponentsInChildren<Button>(true))if(button.name=="ButtonReturn")SetLabel(button.transform as RectTransform,"Назад к выбору органов");
-        var view=root.gameObject.AddComponent<LungViewPanel>();view.controls=find("ModeControllerUI");view.panelToggle=find("ControllerUI");
+        var view=root.gameObject.AddComponent<LungViewPanel>();view.gestures=root.GetComponentInParent<Canvas>().GetComponentInChildren<ModeController>(true);view.controls=find("ModeControllerUI");view.panelToggle=find("ControllerUI");
         var background=NewRect("Фон сердцебиения",root);background.SetAsFirstSibling();
         Place(background,.5f,0,0,400,1000,760);
         var image=background.gameObject.AddComponent<Image>();image.sprite=Rounded;image.type=Image.Type.Sliced;image.color=Background;image.raycastTarget=false;
@@ -201,7 +201,7 @@ public static class AppPresentation
         var breathing=model.gameObject.GetComponent<LungModelBreathing>();
         if(breathing==null) breathing=model.gameObject.AddComponent<LungModelBreathing>();
         breathing.Initialize();
-        var view=root.gameObject.AddComponent<LungViewPanel>(); view.controls=find("ModeControllerUI"); view.panelToggle=find("ControllerUI");
+        var view=root.gameObject.AddComponent<LungViewPanel>();view.gestures=root.GetComponentInParent<Canvas>().GetComponentInChildren<ModeController>(true); view.controls=find("ModeControllerUI"); view.panelToggle=find("ControllerUI");
         var panel=NewRect("Управление дыханием",root); Place(panel,.5f,0,0,360,940,320);
         var image=panel.gameObject.AddComponent<Image>();image.sprite=Rounded;image.type=Image.Type.Sliced;image.color=Background;image.raycastTarget=false;
         var caption=NewRect("Подпись",panel);Place(caption,.5f,1,0,-65,880,85);

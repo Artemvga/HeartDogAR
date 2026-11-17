@@ -58,6 +58,9 @@ public static class HeartDogPlayProbe
                 mode = UnityEngine.Object.FindFirstObjectByType<ModeController>();
                 Check(mode != null && mode.targetObject != null, "Default organ target missing");
                 var all = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                // Reproduce entering the heart panel after choosing zoom mode.
+                mode.SwitchControlMode();
+                Check(mode.GetCurrentControlMode() == ControlMode.Scale, "Zoom setup failed");
                 all.First(t => t.name == "ButtonHeart").GetComponent<Button>().onClick.Invoke();
                 Check(mode.gameObject.activeInHierarchy, "Heart panel disabled the gesture receiver");
                 Check(!mode.rotateUpButton.gameObject.activeInHierarchy && !mode.rotateRightButton.gameObject.activeInHierarchy, "Rotation arrows still visible");
@@ -74,6 +77,18 @@ public static class HeartDogPlayProbe
                 mode.OnPointerDown(pointer);
                 pointer.position += new Vector2(150, 0); mode.OnDrag(pointer); mode.OnPointerUp(pointer);
                 Check(Quaternion.Angle(originalRotation, mode.targetObject.localRotation) > 5, "Heart drag rotation failed");
+                foreach (string name in new[] { "ButtonPol", "ButtonInt" })
+                {
+                    all.First(t => t.name == name && t.GetComponent<Button>() != null && t.gameObject.activeInHierarchy).GetComponent<Button>().onClick.Invoke();
+                    originalRotation = mode.targetObject.localRotation;
+                    mode.OnPointerDown(pointer); pointer.position += new Vector2(150, 0);
+                    mode.OnDrag(pointer); mode.OnPointerUp(pointer);
+                    Check(Quaternion.Angle(originalRotation, mode.targetObject.localRotation) > 5, "Heart version cannot rotate after entering from zoom mode: " + name);
+                    var scale = mode.targetObject.localScale;
+                    mode.OnScroll(new PointerEventData(EventSystem.current) { scrollDelta = new Vector2(0, 2) });
+                    Check(mode.targetObject.localScale.x > scale.x, "Heart version cannot zoom: " + name);
+                }
+                zoomedScale = mode.targetObject.localScale;
                 heartbeat = UnityEngine.Object.FindFirstObjectByType<HeartbeatController>();
                 heartbeat.SetSpeedMultiplier(.5f);
                 heartAnimator = mode.targetObject.GetComponent<Animator>();
